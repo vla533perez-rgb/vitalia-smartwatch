@@ -1,12 +1,13 @@
 package com.vitalia.smartwatch
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 
-class WatchViewModel : ViewModel() {
+class WatchViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Tu compañero reemplaza LogSink() por su implementación (HTTP, WebSocket, Firebase...)
-    private val simulador = SimuladorSmartwatch(sink = LogSink())
+    val watchId = WatchIdentity.get(application)
+    private val simulador = SimuladorSmartwatch(sink = FirebaseRestDataSink(watchId))
 
     val datos = simulador.datos
 
@@ -17,6 +18,9 @@ class WatchViewModel : ViewModel() {
     fun emergencia() = simulador.botonEmergencia()
     fun cancelarEmergencia() = simulador.cancelarEmergencia()
     fun alternarUbicacion() = simulador.alternarUbicacion()
+    fun actualizarAcelerometro(x: Float, y: Float, z: Float) =
+        simulador.actualizarAcelerometro(x, y, z)
+    fun actualizarBateria(porcentaje: Int) = simulador.actualizarBateria(porcentaje)
 
     override fun onCleared() {
         simulador.detener()
