@@ -23,7 +23,7 @@ class LogSink : DataSink {
 }
 
 object FirebaseConfig {
-    const val DATABASE_URL = "https://TU-PROYECTO-default-rtdb.firebaseio.com"
+    const val DATABASE_URL = "https://vitalia-app-aaf99-default-rtdb.firebaseio.com"
 }
 
 object WatchIdentity {
