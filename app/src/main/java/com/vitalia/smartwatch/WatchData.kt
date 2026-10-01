@@ -18,6 +18,10 @@ data class WatchData(
     val adultoMayor: String,
     val estado: String,            // "Todo normal" | "Alerta" | "EMERGENCIA"
     val frecuenciaCardiaca: Int,   // bpm
+    val acelerometroX: Float,
+    val acelerometroY: Float,
+    val acelerometroZ: Float,
+    val caidaDetectada: Boolean,
     val movimiento: String,        // "Normal" | "Reposo" | "Activo" | "Caída detectada"
     val ubicacion: String,         // "En casa" | "Fuera de casa"
     val latitud: Double,
@@ -34,6 +38,10 @@ data class WatchData(
         o.put("adultoMayor", adultoMayor)
         o.put("estado", estado)
         o.put("frecuenciaCardiaca", frecuenciaCardiaca)
+        o.put("acelerometroX", acelerometroX.toDouble())
+        o.put("acelerometroY", acelerometroY.toDouble())
+        o.put("acelerometroZ", acelerometroZ.toDouble())
+        o.put("caidaDetectada", caidaDetectada)
         o.put("movimiento", movimiento)
         o.put("ubicacion", ubicacion)
         o.put("latitud", latitud)

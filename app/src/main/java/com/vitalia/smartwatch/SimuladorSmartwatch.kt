@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /** Simula los sensores de un smartwatch y publica un WatchData cada 2 segundos. */
@@ -17,6 +18,7 @@ class SimuladorSmartwatch(
 ) {
     companion object {
         const val INTERVALO_MS = 2000L
+        const val UMBRAL_IMPACTO_M_S2 = 22f
         // Coordenadas de "casa" (cámbialas si quieres)
         const val CASA_LAT = 13.6929
         const val CASA_LON = -89.2182
@@ -24,11 +26,17 @@ class SimuladorSmartwatch(
 
     private var fc = 74
     private var bateria = 100.0
+    private var bateriaDelSistema = false
     private var caidas = 0
     private var alertasLeves = 0
     private var horasActivas = 0.0
     private var enCasa = true
     private var movimiento = "Normal"
+    private var acelerometroX = 0f
+    private var acelerometroY = 0f
+    private var acelerometroZ = 0f
+    private var caidaDetectada = false
+    private var ultimaCaidaMs = 0L
     private var ticksFcAlta = 0
     private var ticksCaida = 0
     private var sosActivo = false
@@ -55,14 +63,16 @@ class SimuladorSmartwatch(
     // ---------- Acciones manuales (botones del reloj) ----------
 
     fun simularCaida() {
-        ticksCaida = 3
-        caidas++
-        agregarAlerta("CAIDA", "Caída detectada")
-        publicar(emergencia = true)
+        acelerometroX = 0f
+        acelerometroY = 0f
+        acelerometroZ = UMBRAL_IMPACTO_M_S2 + 4f
+        registrarCaida()
     }
 
     fun simularFcAlta() {
         ticksFcAlta = 5
+        fc = 120
+        publicar(emergencia = false)
     }
 
     fun botonEmergencia() {
@@ -85,6 +95,32 @@ class SimuladorSmartwatch(
         publicar(emergencia = false)
     }
 
+    fun actualizarAcelerometro(x: Float, y: Float, z: Float) {
+        acelerometroX = x
+        acelerometroY = y
+        acelerometroZ = z
+        val magnitud = sqrt(x * x + y * y + z * z)
+        val ahora = System.currentTimeMillis()
+        if (magnitud >= UMBRAL_IMPACTO_M_S2 && ahora - ultimaCaidaMs >= 5000L) {
+            registrarCaida()
+        }
+    }
+
+    fun actualizarBateria(porcentaje: Int) {
+        bateria = porcentaje.coerceIn(0, 100).toDouble()
+        bateriaDelSistema = true
+        publicar(emergencia = false)
+    }
+
+    private fun registrarCaida() {
+        ultimaCaidaMs = System.currentTimeMillis()
+        ticksCaida = 3
+        caidaDetectada = true
+        caidas++
+        agregarAlerta("CAIDA", "Impacto fuerte detectado por el acelerómetro")
+        publicar(emergencia = true)
+    }
+
     // ---------- Lógica de simulación ----------
 
     private fun tick() {
@@ -105,12 +141,15 @@ class SimuladorSmartwatch(
                 else -> "Activo"
             }
         }
+        if (ticksCaida == 0) caidaDetectada = false
         if (movimiento == "Normal" || movimiento == "Activo") {
             horasActivas += INTERVALO_MS / 3_600_000.0
         }
 
         // Batería: baja ~1% por minuto (30 ticks)
-        bateria = (bateria - 1.0 / 30.0).coerceAtLeast(0.0)
+        if (!bateriaDelSistema) {
+            bateria = (bateria - 1.0 / 30.0).coerceAtLeast(0.0)
+        }
         if (bateria <= 20 && !bateriaBajaNotificada) {
             bateriaBajaNotificada = true
             alertasLeves++
@@ -146,6 +185,10 @@ class SimuladorSmartwatch(
             adultoMayor = nombre,
             estado = estado,
             frecuenciaCardiaca = fc,
+            acelerometroX = acelerometroX,
+            acelerometroY = acelerometroY,
+            acelerometroZ = acelerometroZ,
+            caidaDetectada = caidaDetectada,
             movimiento = movimiento,
             ubicacion = if (enCasa) "En casa" else "Fuera de casa",
             latitud = lat,
